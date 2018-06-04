@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Rowing Stroke Meter</string>
+    <string name="error_sensor">Sensor error.</string>
 </resources>
