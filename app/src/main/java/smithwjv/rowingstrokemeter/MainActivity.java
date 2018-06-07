@@ -8,6 +8,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.SeekBar;
 import android.widget.TextView;
 
 import com.jjoe64.graphview.GraphView;
@@ -20,7 +21,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private double xAxisLastXValue = -1d;
     private double yAxisLastXValue = -1d;
     private double zAxisLastXValue = -1d;
+    private int defaultYBound = 25;
     private int maxDataPoints = 128;
+    private int maxYBound = 32;
     private Button startStopButton;
     private GraphView xAxisGraphView;
     private GraphView yAxisGraphView;
@@ -28,6 +31,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private LineGraphSeries<DataPoint> xAxisSeries;
     private LineGraphSeries<DataPoint> yAxisSeries;
     private LineGraphSeries<DataPoint> zAxisSeries;
+    private SeekBar yAxisBoundSeekBar;
     private Sensor linearAccelerationSensor;
     private SensorManager mSensorManager;
     private TextView errorMessageTextView;
@@ -51,6 +55,33 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
         });
 
+        yAxisBoundSeekBar = (SeekBar) findViewById(R.id.sb_y_axis_bound);
+        yAxisBoundSeekBar.setMax(maxYBound);
+        yAxisBoundSeekBar.setProgress(defaultYBound);
+        yAxisBoundSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            int value = 0;
+
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                value = progress;
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                xAxisGraphView.getViewport().setMinY(-value);
+                xAxisGraphView.getViewport().setMaxY(value);
+                yAxisGraphView.getViewport().setMinY(-value);
+                yAxisGraphView.getViewport().setMaxY(value);
+                zAxisGraphView.getViewport().setMinY(-value);
+                zAxisGraphView.getViewport().setMaxY(value);
+            }
+        });
+
         xAxisGraphView = (GraphView) findViewById(R.id.gv_linear_acceleration_x_axis);
         yAxisGraphView = (GraphView) findViewById(R.id.gv_linear_acceleration_y_axis);
         zAxisGraphView = (GraphView) findViewById(R.id.gv_linear_acceleration_z_axis);
@@ -71,6 +102,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             errorMessageTextView.setVisibility(View.VISIBLE);
         }
     }
+
 
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) {
@@ -114,8 +146,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         graph.getViewport().setMinX(0);
         graph.getViewport().setMaxX(maxDataPoints);
         graph.getViewport().setYAxisBoundsManual(true);
-        graph.getViewport().setMinY(-25);
-        graph.getViewport().setMaxY(25);
+        graph.getViewport().setMinY(-defaultYBound);
+        graph.getViewport().setMaxY(defaultYBound);
         graph.setTitle(title);
     }
 }
