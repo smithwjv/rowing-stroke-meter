@@ -1,19 +1,26 @@
 package smithwjv.rowingstrokemeter;
 
+import android.content.Context;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.os.Environment;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.jjoe64.graphview.GraphView;
 import com.jjoe64.graphview.series.DataPoint;
 import com.jjoe64.graphview.series.LineGraphSeries;
+
+import java.io.File;
+import java.io.FileOutputStream;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
 
@@ -35,6 +42,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private Sensor linearAccelerationSensor;
     private SensorManager mSensorManager;
     private TextView errorMessageTextView;
+    private final String LOG_TAG = this.getClass().getName();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -149,5 +157,39 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         graph.getViewport().setMinY(-defaultYBound);
         graph.getViewport().setMaxY(defaultYBound);
         graph.setTitle(title);
+    }
+
+    /* Checks if external storage is available for read and write */
+    private boolean isExternalStorageWritable() {
+        String state = Environment.getExternalStorageState();
+        if (Environment.MEDIA_MOUNTED.equals(state)) {
+            return true;
+        }
+        return false;
+    }
+
+    private File getPrivateStorageDir(Context context, String folderName) {
+        // get the directory for the app's private directory and create a new subdirectory
+        File file = new File(context.getExternalFilesDir(null), folderName);
+        if (!file.mkdirs()) {
+            Log.e(LOG_TAG, "Directory not created");
+        }
+        return file;
+    }
+
+    private void writeTestFile() {
+        if (isExternalStorageWritable()) {
+            File testDir = getPrivateStorageDir(this, "test");
+            File testFile = new File(testDir, "test.txt");
+            String testString = "The quick brown fox jumps over the lazy dog.";
+            try {
+                FileOutputStream outputStream = new FileOutputStream(testFile);
+                outputStream.write(testString.getBytes());
+                outputStream.close();
+                Toast.makeText(this, "Test file created.", Toast.LENGTH_SHORT).show();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
     }
 }
