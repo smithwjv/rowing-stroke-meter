@@ -14,7 +14,6 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.SeekBar;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import com.jjoe64.graphview.GraphView;
@@ -50,7 +49,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private SeekBar yAxisBoundSeekBar;
     private Sensor linearAccelerationSensor;
     private SensorManager mSensorManager;
-    private TextView errorMessageTextView;
     private final String LOG_TAG = this.getClass().getName();
 
     @Override
@@ -58,7 +56,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        errorMessageTextView = (TextView) findViewById(R.id.tv_error_message);
         recordingProgressBar = (ProgressBar) findViewById(R.id.pb_recording);
 
         startStopButton = (Button) findViewById(R.id.btn_start_stop);
@@ -118,8 +115,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             linearAccelerationSensor = mSensorManager.getDefaultSensor(Sensor
                     .TYPE_LINEAR_ACCELERATION);
         } else {
-            errorMessageTextView.setText(R.string.error_sensor);
-            errorMessageTextView.setVisibility(View.VISIBLE);
+            Toast.makeText(this, R.string.error_sensor, Toast.LENGTH_SHORT).show();
         }
 
         start = true;
