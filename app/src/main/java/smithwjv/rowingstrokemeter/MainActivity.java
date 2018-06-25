@@ -137,8 +137,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss.SSS"
                 , Locale.UK);
         String data = dateFormat.format(System.currentTimeMillis() - SystemClock.elapsedRealtime()
-                + (event.timestamp / 1000000L)) + " " + String.valueOf(event.values[0]) + ", "
-                + String.valueOf(event.values[1]) + ", " + String.valueOf(event.values[2]) + "\n";
+                + (event.timestamp / 1000000L)) + " "
+                + String.format(Locale.UK, "%-16.9f", event.values[0])
+                + String.format(Locale.UK, "%-16.9f", event.values[1])
+                + String.format(Locale.UK, "%-16.9f", event.values[2]) + "\n";
         try {
             mBufferedWriter.append(data);
         } catch (IOException e) {
