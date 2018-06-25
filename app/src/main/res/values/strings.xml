@@ -3,4 +3,5 @@
     <string name="error_sensor">Sensor error.</string>
     <string name="button_start">Start</string>
     <string name="button_stop">Stop</string>
+    <string name="error_write">Unable to write to file.</string>
 </resources>

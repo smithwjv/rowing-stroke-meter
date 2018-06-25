@@ -6,11 +6,13 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Environment;
+import android.os.SystemClock;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ProgressBar;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -19,18 +21,24 @@ import com.jjoe64.graphview.GraphView;
 import com.jjoe64.graphview.series.DataPoint;
 import com.jjoe64.graphview.series.LineGraphSeries;
 
+import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
 
     private boolean listening;
+    private boolean start;
     private double xAxisLastXValue = -1d;
     private double yAxisLastXValue = -1d;
     private double zAxisLastXValue = -1d;
     private int defaultYBound = 25;
     private int maxDataPoints = 128;
     private int maxYBound = 32;
+    private BufferedWriter mBufferedWriter;
     private Button startStopButton;
     private GraphView xAxisGraphView;
     private GraphView yAxisGraphView;
@@ -38,6 +46,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private LineGraphSeries<DataPoint> xAxisSeries;
     private LineGraphSeries<DataPoint> yAxisSeries;
     private LineGraphSeries<DataPoint> zAxisSeries;
+    private ProgressBar recordingProgressBar;
     private SeekBar yAxisBoundSeekBar;
     private Sensor linearAccelerationSensor;
     private SensorManager mSensorManager;
@@ -50,14 +59,17 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         setContentView(R.layout.activity_main);
 
         errorMessageTextView = (TextView) findViewById(R.id.tv_error_message);
+        recordingProgressBar = (ProgressBar) findViewById(R.id.pb_recording);
 
         startStopButton = (Button) findViewById(R.id.btn_start_stop);
+        startStopButton.setText(R.string.button_start);
         startStopButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 if (listening) {
                     onPause();
                 } else {
+                    if (start) start = false;
                     onResume();
                 }
             }
@@ -109,6 +121,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             errorMessageTextView.setText(R.string.error_sensor);
             errorMessageTextView.setVisibility(View.VISIBLE);
         }
+
+        start = true;
+        listening = false;
     }
 
 
@@ -129,15 +144,40 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         zAxisLastXValue += 1d;
         zAxisSeries.appendData(new DataPoint(zAxisLastXValue,  (double) event.values[2]), true
                 , maxDataPoints);
+
+        // write to file
+        SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss.SSS"
+                , Locale.UK);
+        String data = dateFormat.format(System.currentTimeMillis() - SystemClock.elapsedRealtime()
+                + (event.timestamp / 1000000L)) + " "
+                + String.valueOf(event.values[0]) + ", " + String.valueOf(event.values[1]) + ", "
+                + String.valueOf(event.values[2]) + "\n";
+        try {
+            mBufferedWriter.append(data);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        mSensorManager.registerListener(this, linearAccelerationSensor, SensorManager
-                .SENSOR_DELAY_FASTEST);
-        listening = true;
-        startStopButton.setText(R.string.button_stop);
+        if (!start) {
+            startStopButton.setText(R.string.button_stop);
+            recordingProgressBar.setVisibility(View.VISIBLE);
+            if (isExternalStorageWritable()) {
+                try {
+                    mBufferedWriter = new BufferedWriter(new FileWriter(getFile()));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            } else {
+                Toast.makeText(this, R.string.error_write, Toast.LENGTH_SHORT).show();
+            }
+            mSensorManager.registerListener(this, linearAccelerationSensor, SensorManager
+                    .SENSOR_DELAY_GAME);
+            listening = true;
+        }
     }
 
     @Override
@@ -146,6 +186,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         mSensorManager.unregisterListener(this);
         listening = false;
         startStopButton.setText(R.string.button_start);
+        recordingProgressBar.setVisibility(View.INVISIBLE);
+        try {
+            mBufferedWriter.flush();
+            mBufferedWriter.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
     }
 
     private void configureGraph(GraphView graph, LineGraphSeries<DataPoint> series, String title) {
@@ -159,13 +207,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         graph.setTitle(title);
     }
 
-    /* Checks if external storage is available for read and write */
     private boolean isExternalStorageWritable() {
+        // checks if external storage is available for read and write
         String state = Environment.getExternalStorageState();
-        if (Environment.MEDIA_MOUNTED.equals(state)) {
-            return true;
-        }
-        return false;
+        return Environment.MEDIA_MOUNTED.equals(state);
     }
 
     private File getPrivateStorageDir(Context context, String folderName) {
@@ -177,19 +222,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         return file;
     }
 
-    private void writeTestFile() {
-        if (isExternalStorageWritable()) {
-            File testDir = getPrivateStorageDir(this, "test");
-            File testFile = new File(testDir, "test.txt");
-            String testString = "The quick brown fox jumps over the lazy dog.";
-            try {
-                FileOutputStream outputStream = new FileOutputStream(testFile);
-                outputStream.write(testString.getBytes());
-                outputStream.close();
-                Toast.makeText(this, "Test file created.", Toast.LENGTH_SHORT).show();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
+    private File getFile() {
+        File dir = getPrivateStorageDir(this, "test");
+        return new File(dir, "test.txt");
     }
 }
