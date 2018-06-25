@@ -29,11 +29,10 @@ import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
 
-    private boolean listening;
-    private boolean start;
-    private double xAxisLastXValue = -1d;
-    private double yAxisLastXValue = -1d;
-    private double zAxisLastXValue = -1d;
+    private boolean pause;
+    private double xAxisLastXValue;
+    private double yAxisLastXValue;
+    private double zAxisLastXValue;
     private int defaultYBound = 25;
     private int maxDataPoints = 128;
     private int maxYBound = 32;
@@ -63,11 +62,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         startStopButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (listening) {
-                    onPause();
-                } else {
-                    if (start) start = false;
+                if (pause) {
+                    pause = false;
                     onResume();
+                } else {
+                    onPause();
                 }
             }
         });
@@ -102,24 +101,17 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         xAxisGraphView = (GraphView) findViewById(R.id.gv_linear_acceleration_x_axis);
         yAxisGraphView = (GraphView) findViewById(R.id.gv_linear_acceleration_y_axis);
         zAxisGraphView = (GraphView) findViewById(R.id.gv_linear_acceleration_z_axis);
-        xAxisSeries = new LineGraphSeries<>();
-        yAxisSeries = new LineGraphSeries<>();
-        zAxisSeries = new LineGraphSeries<>();
-        configureGraph(xAxisGraphView, xAxisSeries, "x_axis");
-        configureGraph(yAxisGraphView, yAxisSeries, "y_axis");
-        configureGraph(zAxisGraphView, zAxisSeries, "z_axis");
+        resetGraphs();
 
         mSensorManager = (SensorManager) getSystemService(MainActivity.SENSOR_SERVICE);
         // check if linear acceleration sensor exists
         if (mSensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION) != null) {
             linearAccelerationSensor = mSensorManager.getDefaultSensor(Sensor
                     .TYPE_LINEAR_ACCELERATION);
+            pause = true;
         } else {
             Toast.makeText(this, R.string.error_sensor, Toast.LENGTH_SHORT).show();
         }
-
-        start = true;
-        listening = false;
     }
 
 
@@ -145,9 +137,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss.SSS"
                 , Locale.UK);
         String data = dateFormat.format(System.currentTimeMillis() - SystemClock.elapsedRealtime()
-                + (event.timestamp / 1000000L)) + " "
-                + String.valueOf(event.values[0]) + ", " + String.valueOf(event.values[1]) + ", "
-                + String.valueOf(event.values[2]) + "\n";
+                + (event.timestamp / 1000000L)) + " " + String.valueOf(event.values[0]) + ", "
+                + String.valueOf(event.values[1]) + ", " + String.valueOf(event.values[2]) + "\n";
         try {
             mBufferedWriter.append(data);
         } catch (IOException e) {
@@ -158,7 +149,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     @Override
     protected void onResume() {
         super.onResume();
-        if (!start) {
+        if (!pause) {
             startStopButton.setText(R.string.button_stop);
             recordingProgressBar.setVisibility(View.VISIBLE);
             if (isExternalStorageWritable()) {
@@ -172,7 +163,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
             mSensorManager.registerListener(this, linearAccelerationSensor, SensorManager
                     .SENSOR_DELAY_GAME);
-            listening = true;
+            pause = false;
         }
     }
 
@@ -180,16 +171,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     protected void onPause() {
         super.onPause();
         mSensorManager.unregisterListener(this);
-        listening = false;
+        pause = true;
         startStopButton.setText(R.string.button_start);
         recordingProgressBar.setVisibility(View.INVISIBLE);
+        resetGraphs();
         try {
             mBufferedWriter.flush();
             mBufferedWriter.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
-
     }
 
     private void configureGraph(GraphView graph, LineGraphSeries<DataPoint> series, String title) {
@@ -221,5 +212,20 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private File getFile() {
         File dir = getPrivateStorageDir(this, "test");
         return new File(dir, "test.txt");
+    }
+
+    private void resetGraphs() {
+        xAxisLastXValue = -1d;
+        yAxisLastXValue = -1d;
+        zAxisLastXValue = -1d;
+        xAxisSeries = new LineGraphSeries<>();
+        yAxisSeries = new LineGraphSeries<>();
+        zAxisSeries = new LineGraphSeries<>();
+        xAxisGraphView.removeAllSeries();
+        yAxisGraphView.removeAllSeries();
+        zAxisGraphView.removeAllSeries();
+        configureGraph(xAxisGraphView, xAxisSeries, "x_axis");
+        configureGraph(yAxisGraphView, yAxisSeries, "y_axis");
+        configureGraph(zAxisGraphView, zAxisSeries, "z_axis");
     }
 }
